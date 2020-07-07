@@ -21,10 +21,10 @@ class HashTable:
     Implement this.
     """
 
-    def __init__(self, capacity):
+    def __init__(self, capacity: int = MIN_CAPACITY):
         self.capacity = capacity
-        self.size = 0
         self.data = [None for i in range(capacity)]
+        self.size = 0
 
     def get_num_slots(self):
         """
@@ -85,12 +85,29 @@ class HashTable:
         Implement this.
         """
         bucket = self.hash_index(key)
+
         if self.data[bucket] is None:
             self.data[bucket] = HashTableEntry(key, value)
             self.size += 1
 
-        if self.data[bucket] is not None:
-            self.data[bucket] = HashTableEntry(key, value)
+            if self.get_load_factor() > 0.7:
+                self.resize(self.capacity * 2)
+        else:
+            current = self.data[bucket]
+
+            while current.next is not None and current.key != key:
+                current = current.next
+
+            # Overwrite existing value
+            if current.key == key:
+                current.value = value
+            else:
+                # Key does not exist, so must be added
+                current.next = HashTableEntry(key, value)
+                self.size += 1
+
+                if self.get_load_factor() > 0.7:
+                    self.resize(self.capacity * 2)
 
     def delete(self, key):
         """
@@ -102,8 +119,22 @@ class HashTable:
         """
         bucket = self.hash_index(key)
 
-        if self.data[bucket] is not None:
-            self.data[bucket] = None
+        current = self.data[bucket]
+
+        if current is None:
+            print('The key was not found.')
+        elif current.key == key:
+            self.data[bucket] = current.next
+            self.size -= 1
+        else:
+            while current.next is not None and current.next.key != key:
+                current = current.next
+
+            if current.next.key == key:
+                current.next = current.next.next
+                self.size -= 1
+            else:
+                print('The key was not found.')
 
     def get(self, key):
         """
@@ -116,9 +147,17 @@ class HashTable:
         bucket = self.hash_index(key)
 
         if self.data[bucket] is not None:
-            return self.data[bucket].value
+            current = self.data[bucket]
+
+            while current is not None and current.key != key:
+                current = current.next
+
+            if current:
+                return current.value
+            else:
+                return None
         else:
-            print('The key was not found')
+            return None
 
     def resize(self, new_capacity):
         """
@@ -127,7 +166,30 @@ class HashTable:
 
         Implement this.
         """
-        # Your code here
+        self.capacity = new_capacity
+        new_storage = [None for i in range(new_capacity)]
+
+        for linked_list in self.data:
+            current = linked_list
+
+            while current is not None:
+                bucket = self.hash_index(current.key)
+
+                if new_storage[bucket] is None:
+                    new_storage[bucket] = HashTableEntry(
+                        current.key, current.value)
+                else:
+                    new_current = new_storage[bucket]
+
+                    while new_current.next is not None:
+                        new_current = new_current.next
+
+                    new_current.next = HashTableEntry(
+                        current.key, current.value)
+
+                current = current.next
+
+        self.data = new_storage
 
 
 if __name__ == "__main__":
